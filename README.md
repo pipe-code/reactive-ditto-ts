@@ -28,10 +28,13 @@ When starting a project from this base, go through these steps in order:
 - Rename the theme folder
 
 ### 2. Set the ACF field name
-All page content lives in an ACF flexible content field. The default name is `ditto_components`. Rename it to something project-specific (e.g. `myproject_components`) and update it in three places:
+All page content lives in an ACF flexible content field, defined in `acf-json/group_ditto_page_builder.json` (sync it in wp-admin → Custom Fields → Field Groups → Sync). The default name is `ditto_components`. Rename it to something project-specific (e.g. `myproject_components`) and update it in four places:
+- `acf-json/group_ditto_page_builder.json` (the field's `name` — keep the file and group key in sync if you rename those too)
 - `inc/wordpress_settings.php` → `ditto_scripts()` (the `get_field()` call)
 - `inc/endpoints.php` → `page_handler()` (the `get_field()` call)
 - `footer.php` (the `get_field()` call)
+
+The JSON ships with one example layout (`Hello`) — replace it with the project's real components as you build them.
 
 ### 3. Configure Google Analytics
 In `header.php`, set the `gaId` variable to your GA4 Measurement ID (e.g. `'G-XXXXXXXXXX'`).
@@ -42,7 +45,11 @@ In `header.php`, set the `gaId` variable to your GA4 Measurement ID (e.g. `'G-XX
 - The site key is automatically exposed to the frontend via `window._recaptchaSiteKey_`
 
 ### 5. Configure the form proxy (if using a third-party form API)
-In your `.env` file, set `PROXY_SUBMISSION_URL` to the target endpoint. See `.env.example`.
+Define the constant in `wp-config.php` (PHP does not read `.env` — that file is only for webpack build-time vars):
+```php
+define( 'PROXY_SUBMISSION_URL', 'https://api.example.com/submit' );
+```
+Leave it undefined to keep the proxy endpoint disabled.
 
 ### 6. Set up fonts
 Place `.woff` / `.woff2` files in `src/fonts/` and declare them in `src/styles/_fonts.scss`.

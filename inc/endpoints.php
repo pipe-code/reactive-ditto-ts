@@ -49,7 +49,7 @@ add_action( 'rest_api_init', function () {
             'permission_callback'   => '__return_true',
         )
     ) );
-    // Third-party form proxy — configure the target URL in blackline_submission_handler()
+    // Third-party form proxy — define PROXY_SUBMISSION_URL in wp-config.php (see proxy_submission_handler)
     register_rest_route( 'proxy', '/v1/submission', array(
         array(
             'methods'               => WP_REST_Server::CREATABLE,
@@ -76,7 +76,15 @@ function main_menu_handler() {
 
     if($menu) {
         foreach ($menu as $key => $item) {
-            $path = ($frontpage_id == $item->object_id) ? '/' : '/'.get_post_field( 'post_name', $item->object_id );
+            // Custom link menu items (type 'custom', object_id = 0) have no post
+            // to read a slug from — use their URL directly. Handles hash anchors
+            // (/#section), external links, and any hand-typed URL. Mirrored in
+            // ssr/fixed/Header.php.
+            if ( $item->type === 'custom' ) {
+                $path = wp_make_link_relative( $item->url );
+            } else {
+                $path = ($frontpage_id == $item->object_id) ? '/' : '/'.get_post_field( 'post_name', $item->object_id );
+            }
             $output["menu"][] = [
                 "ID"        => (int)$item->ID,
                 "title"     => $item->title,

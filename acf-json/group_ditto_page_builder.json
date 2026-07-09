@@ -1,0 +1,76 @@
+{
+    "key": "group_ditto_page_builder",
+    "title": "Page Builder",
+    "fields": [
+        {
+            "key": "field_ditto_components",
+            "label": "Components",
+            "name": "ditto_components",
+            "aria-label": "",
+            "type": "flexible_content",
+            "instructions": "",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "layouts": {
+                "layout_hello": {
+                    "key": "layout_hello",
+                    "name": "Hello",
+                    "label": "Hello (example — replace with real components)",
+                    "display": "block",
+                    "sub_fields": [
+                        {
+                            "key": "field_hello_title",
+                            "label": "Title",
+                            "name": "title",
+                            "aria-label": "",
+                            "type": "text",
+                            "instructions": "",
+                            "required": 0,
+                            "conditional_logic": 0,
+                            "wrapper": {
+                                "width": "",
+                                "class": "",
+                                "id": ""
+                            },
+                            "default_value": "",
+                            "maxlength": "",
+                            "placeholder": "",
+                            "prepend": "",
+                            "append": ""
+                        }
+                    ],
+                    "min": "",
+                    "max": ""
+                }
+            },
+            "min": "",
+            "max": "",
+            "button_label": "Add Component"
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "page"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "hide_on_screen": [
+        "the_content"
+    ],
+    "active": true,
+    "description": "Flexible content powering the SPA. Layout names must match the lazyComponents keys in src\/UI\/DynamicZone\/DynamicZone.tsx exactly. Rename ditto_components per project (see README step 2).",
+    "show_in_rest": 0
+}

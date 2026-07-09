@@ -116,7 +116,7 @@ The `@mixin hover` is defined in `_vars.scss` as `@media (hover: hover) and (poi
 
 ## ACF Field Conventions
 
-- **Dynamic component layouts** are registered alphabetically in both `acf-json/group_ailanthus_page_builder.json` and `src/UI/DynamicZone/DynamicZone.tsx`.
+- **Dynamic component layouts** are registered alphabetically in both the page builder JSON (`acf-json/group_ditto_page_builder.json` — renamed per project) and `src/UI/DynamicZone/DynamicZone.tsx`.
 - **File fields** that accept images or videos must set `"mime_types": "jpg,jpeg,png,gif,svg,webp,mp4,webm"` and `"return_format": "array"` so the REST API returns the full object (`url`, `mime_type`, `alt`). Render them by branching on `mime_type`: a looping muted `<video autoPlay muted playsInline loop preload="metadata">` for `mime_type.includes('video')`, otherwise `<img loading="lazy" decoding="async">`. This lets editors swap any image for a video with zero code change — prefer a single `file` field over separate image/video fields. Where a mobile crop differs, add an optional `*_mobile` file field that falls back to the desktop one.
 - **CTA fields** use ACF `link` type (`"return_format": "array"`) — returns `{ url, title, target }`. Never use `url` type for CTAs since it rejects hash anchors (`#section-id`).
 - **Stats / fixed-count sub-fields**: prefer flat named fields (`stat_1_value`, `stat_1_label`, …) over a repeater when the design has a fixed number of items.
@@ -335,7 +335,7 @@ When adding a new dynamic component, two WP-CLI steps are needed after updating 
 **1. Sync the field group to the database:**
 ```php
 wp eval '
-$json  = file_get_contents(get_template_directory() . "/acf-json/group_ailanthus_page_builder.json");
+$json  = file_get_contents(get_template_directory() . "/acf-json/group_ditto_page_builder.json");
 $group = json_decode($json, true);
 acf_import_field_group($group);
 '

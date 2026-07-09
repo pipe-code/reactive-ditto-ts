@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useSetRecoilState } from 'recoil';
 import { siteLoadedAtom } from '@utils/recoilStates';
 import styles from './Footer.module.scss';

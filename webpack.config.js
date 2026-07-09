@@ -24,7 +24,6 @@ module.exports = {
             '@components': path.resolve(__dirname, 'src/components/'),
             '@containers': path.resolve(__dirname, 'src/containers/'),
             '@fonts': path.resolve(__dirname, 'src/fonts/'),
-            '@layout': path.resolve(__dirname, 'src/Layout/'),
             '@ui': path.resolve(__dirname, 'src/UI/'),
             '@hooks': path.resolve(__dirname, 'src/hooks/'),
             '@utils': path.resolve(__dirname, 'src/utils/'),
@@ -33,12 +32,13 @@ module.exports = {
         }
     },
     plugins: [
-        // Expose only the specific env vars the bundle needs.
+        // Expose only the specific env vars the bundle needs, e.g.:
+        //   "process.env.MY_PUBLIC_KEY": JSON.stringify(process.env.MY_PUBLIC_KEY)
+        // NODE_ENV is injected automatically by webpack from --mode; defining it
+        // here again causes a "Conflicting values" build warning.
         // Never use JSON.stringify(process.env) — that leaks every env variable
         // (including secrets) into the compiled bundle.
-        new webpack.DefinePlugin({
-            "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || 'development'),
-        })
+        new webpack.DefinePlugin({})
     ],
     ignoreWarnings: [
         (warning) => warning.message.includes('Sass @import rules are deprecated'),

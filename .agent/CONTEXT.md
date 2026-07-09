@@ -390,7 +390,7 @@ The field is named `ditto_components`. To rename it:
 In `header.php`, set the `gaId` variable to your GA4 Measurement ID (e.g. `'G-XXXXXXXXXX'`).
 
 ### Configure the form proxy endpoint
-In `inc/endpoints.php` → `proxy_submission_handler()`, set the `PROXY_SUBMISSION_URL` constant in your `.env` file or override `$url` directly.
+Define the PHP constant in `wp-config.php`: `define( 'PROXY_SUBMISSION_URL', 'https://…' );`. Note `.env` is webpack-only (dotenv at build time) — PHP never reads it, so putting the URL there does nothing. `proxy_submission_handler()` in `inc/endpoints.php` returns a 500 until the constant is defined.
 
 ### Add a new language
 1. Install and configure WPM plugin
