@@ -8,6 +8,13 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'app.bundle.js',
+        // Content-hash the lazy-loaded component chunks so the browser (and any
+        // CDN) never serves a stale chunk after a rebuild — a stale chunk looks
+        // exactly like "my change didn't work". The main bundle is cache-busted
+        // separately via filemtime in ditto_scripts() (inc/wordpress_settings.php).
+        chunkFilename: '[name].[contenthash:8].app.bundle.js',
+        // Wipe dist/ on every build so old hashed chunks don't accumulate.
+        clean: true,
         publicPath: 'auto'
     },
     resolve: {

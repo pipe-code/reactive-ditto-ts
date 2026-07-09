@@ -148,13 +148,17 @@ This means PHP SSR templates can safely hardcode class names like `Contact__wrap
 
 ### Client-Side Flow
 
+Use the ready-made helper `src/utils/recaptchaVerify.tsx` — call `await recaptchaVerify('submit')` in a form's submit handler and only proceed if it returns `true`. It encapsulates the full flow:
+
 ```
-1. Load reCAPTCHA script lazily (only when form is about to be submitted)
-2. Call grecaptcha.execute(siteKey, { action: 'submit' }) → token
+1. Lazy-load the reCAPTCHA script the first time it's needed (never on page load)
+2. grecaptcha.execute(siteKey, { action }) → token
 3. POST token to /wp-json/recaptcha/v1/verify
 4. Server verifies with Google and returns { success: true, score: 0.9 }
-5. Proceed with form submission only if score >= 0.5
+5. Returns true only if success && score >= 0.5 (threshold constant in the file)
 ```
+
+The site key comes from `window._recaptchaSiteKey_`; the helper warns and returns `false` if it's unset, so forms fail closed rather than sending unverified.
 
 ### Server-Side (inc/recaptcha.php)
 
@@ -173,6 +177,20 @@ POST /wp-json/contact-form-7/v1/contact-forms/{id}/feedback
 ```
 
 The CF7 frontend scripts are intentionally dequeued in `inc/wordpress_settings.php` (the React form handles everything).
+
+---
+
+## Client Utilities (src/utils/)
+
+Small, dependency-free helpers reused across projects — prefer these over re-implementing:
+
+| Helper | Use |
+|---|---|
+| `recaptchaVerify(action)` | Full reCAPTCHA v3 execute-and-verify; returns `Promise<boolean>`. See the reCAPTCHA section. |
+| `smoothScrollTo(targetY, duration?)` | Eased (`easeInOutCubic`) programmatic scroll. Use for long, deliberate jumps (e.g. a header CTA scrolling to the footer form) where native `scroll-behavior: smooth` is too fast/linear. Default duration 1600ms. |
+| `htmlentities(str)` | (in `functions.tsx`) decode entities before setting `document.title`. |
+
+When you add a helper that a future project would want, put it here as a single-purpose default export and document it in this table.
 
 ---
 
@@ -277,6 +295,19 @@ dist/                      Compiled JS/CSS bundles (never edit manually)
 5. **REST API caching** — `Cache-Control: public, max-age=300` on all GET endpoints
 6. **Code splitting** — all ACF components are lazily imported via `React.lazy()`
 7. **Deterministic CSS** — no hash in class names; PHP SSR templates can hardcode them safely
+
+### Cache busting — two independent layers (get this right or "my change didn't work")
+
+The single most common false bug on this stack is a **stale asset in the browser or CDN**: the code is correct, the build ran, but the visitor is served an old file. Two layers prevent it, and they cover different files:
+
+- **Main bundle** (`dist/app.bundle.js`) — enqueued in `ditto_scripts()` with `filemtime()` as the `?ver=` query arg, so every rebuild changes the URL. Never hard-code a version here; `wp_get_theme()->get('Version')` only changes when you bump `style.css`, which you will forget to do.
+- **Lazy chunks** (one per `React.lazy()` component) — `webpack.config.js` sets `chunkFilename: '[name].[contenthash:8].app.bundle.js'` so a changed chunk gets a new filename, and `output.clean: true` wipes `dist/` each build so old hashes don't pile up.
+
+Rule of thumb when debugging "the change isn't showing": rebuild (`npm run prod`), then confirm the served filename/`?ver=` actually changed before assuming the code is wrong. A chunk **cannot** update without a rebuild — watch mode does rebuild, but a one-off `npm run dev`/`prod` is required after pulling.
+
+### Scroll ownership
+
+`src/app.tsx` sets `window.history.scrollRestoration = 'manual'`. The SPA owns scroll positioning (`Page.tsx` resets scroll on navigation); leaving it on the browser's default `auto` leaves the page half-scrolled into the previous view when the user hits back/forward. Any component that scrolls programmatically (e.g. a header CTA jumping to the footer) should assume it is the only thing moving the viewport.
 
 ---
 

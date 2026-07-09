@@ -9,7 +9,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  * https://developer.wordpress.org/reference/hooks/wp_enqueue_scripts/
  */
 function ditto_scripts() {
-  $appVersion = wp_get_theme()->get( 'Version' );
+  // Cache-bust with the bundle's mtime so every build invalidates the browser
+  // and CDN copy automatically. Falls back to the theme version if dist is
+  // missing (e.g. before the first build). Lazy chunks are busted separately by
+  // their content hash (chunkFilename in webpack.config.js).
+  $bundle_path = get_template_directory() . '/dist/app.bundle.js';
+  $appVersion  = file_exists( $bundle_path ) ? filemtime( $bundle_path ) : wp_get_theme()->get( 'Version' );
   wp_enqueue_script( 'app-scripts', get_template_directory_uri() . '/dist/app.bundle.js', array(), $appVersion, true );
 
   // Pre-load router data so React doesn't need an extra API round-trip on first paint

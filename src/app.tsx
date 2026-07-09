@@ -64,6 +64,13 @@ const App: React.FC = () => {
   )
 }
 
+// The SPA owns scroll positioning (Page.tsx resets scroll on navigation and can
+// scroll to anchors). Letting the browser restore scroll on back/forward leaves
+// the page half-scrolled into the previous view when returning — take it over.
+if ('scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
+}
+
 const appElement = document.getElementById("app");
 
 if (appElement) {

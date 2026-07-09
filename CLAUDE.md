@@ -16,6 +16,18 @@ All the detail an AI needs to work effectively in this codebase lives in **`.age
 
 Read it before making non-trivial changes.
 
+## Working standard — how to hit production quality
+
+These are the habits that separate a "looks about right" build from a client-ready one. They cost minutes and save review rounds. Apply them by default.
+
+1. **Verify live, never assume.** After `npm run prod`, actually load the page and *measure* — read computed styles and element rects (`getBoundingClientRect`, `getComputedStyle`) in the browser/devtools, don't eyeball a screenshot and declare victory. "Footer is one viewport tall" should be confirmed as `height === innerHeight - headerHeight`, not guessed. When you fix a reported bug, reproduce it first, then prove the fix with the same measurement.
+2. **Confirm the asset actually changed.** Before concluding "the code is wrong," verify the browser is serving the new bundle/chunk (check the `?ver=` and chunk filename — see the cache-busting notes in `.agent/CONTEXT.md`). A stale asset is the #1 false bug on this stack.
+3. **Pull exact values from Figma — never guess.** Every size, weight, line-height, tracking, color, and copy string comes from the design via the Figma MCP tools (`get_design_context`, `get_metadata`, `get_screenshot`), not from a similar-looking component or memory. Load copy through ACF, never hard-code it.
+4. **Figma spacing is ink-to-ink.** Figma measures gaps from cap-height to baseline (text-box-trim); the browser adds line-box leading on top. When a vertical gap looks larger in the browser than the Figma number, the fix is usually a small negative/reduced margin on the text element — reason about the leading rather than blindly matching the px value.
+5. **Report faithfully.** If something is blocked (missing credentials, a server-side dependency), say so and why — don't paper over it. If a test/verification was skipped, state it. "Done" means verified.
+
+Scope discipline: build only what the current release needs (check the project's first-release scope), keep unfinished work off `main`, and confirm before anything hard to reverse or outward-facing (form submissions to live CRMs, deploys, deletes).
+
 ## Styling Conventions
 
 - **Never use raw `px` values** in SCSS — always use `fluid($size)` defined in `src/styles/_vars.scss`. It produces `clamp(size@1024, scaleVW(size, 1440), size@1680)`.
@@ -105,7 +117,7 @@ The `@mixin hover` is defined in `_vars.scss` as `@media (hover: hover) and (poi
 ## ACF Field Conventions
 
 - **Dynamic component layouts** are registered alphabetically in both `acf-json/group_ailanthus_page_builder.json` and `src/UI/DynamicZone/DynamicZone.tsx`.
-- **File fields** that accept images or videos must set `"mime_types": "jpg,jpeg,png,gif,svg,webp,mp4,webm"` and `"return_format": "array"` so the REST API returns the full object (`url`, `mime_type`, `alt`).
+- **File fields** that accept images or videos must set `"mime_types": "jpg,jpeg,png,gif,svg,webp,mp4,webm"` and `"return_format": "array"` so the REST API returns the full object (`url`, `mime_type`, `alt`). Render them by branching on `mime_type`: a looping muted `<video autoPlay muted playsInline loop preload="metadata">` for `mime_type.includes('video')`, otherwise `<img loading="lazy" decoding="async">`. This lets editors swap any image for a video with zero code change — prefer a single `file` field over separate image/video fields. Where a mobile crop differs, add an optional `*_mobile` file field that falls back to the desktop one.
 - **CTA fields** use ACF `link` type (`"return_format": "array"`) — returns `{ url, title, target }`. Never use `url` type for CTAs since it rejects hash anchors (`#section-id`).
 - **Stats / fixed-count sub-fields**: prefer flat named fields (`stat_1_value`, `stat_1_label`, …) over a repeater when the design has a fixed number of items.
 
