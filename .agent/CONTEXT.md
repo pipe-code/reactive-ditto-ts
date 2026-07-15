@@ -107,7 +107,7 @@ The REST API endpoint `GET /wp-json/page/{id}` returns the field as an array:
    MyComponent: lazy(() => import('@components/MyComponent/MyComponent')),
    ```
 3. The key **must** match the `acf_fc_layout` string set in ACF
-4. Optionally add a PHP SSR template at `ssr/components/MyComponent.php`
+4. Add a matching PHP SSR template at `ssr/components/MyComponent.php` — required, not optional, for any component with real text/business content. See CLAUDE.md → "Why `ssr/fixed/Header.php` and `ssr/fixed/Footer.php` are not optional" for why this stopped being a nice-to-have.
 
 ---
 
@@ -339,6 +339,7 @@ Fixed component SSR rules:
 - Guard CPT-specific templates with `if ( ! is_singular('cpt-slug') ) return;`
 - **Header**: read nav with `wp_get_nav_menu_items($menu_locations['main_menu'])`. For custom link menu items (type `custom`, `object_id = 0`), use `wp_make_link_relative($item->url)` — plain `get_post_field('post_name', 0)` returns empty string causing `path = '/'`.
 - **Footer**: read fields with `get_field('field_name', 'options')`. Skip the newsletter form (no SEO value).
+- These two are **required on every project**, not starter boilerplate to skip — see CLAUDE.md for the incident that made this a hard rule. `ditto_organization_schema()` (`inc/wordpress_settings.php`) adds a JSON-LD identity block alongside them; keep it wired in `header.php`.
 
 ---
 

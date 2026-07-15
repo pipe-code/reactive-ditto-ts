@@ -394,6 +394,17 @@ Webpack uses `localIdentName: "[name]__[local]"` (no hash). Hardcode class names
 ### Fixed component SSR rules
 - **Header**: read nav with `wp_get_nav_menu_items($menu_locations['main_menu'])`. Use the same custom link detection logic as `main_menu_handler()`.
 - **Footer**: read all fields with `get_field('field_name', 'options')`. Omit the newsletter form.
+- **`ditto_organization_schema()`** (`inc/wordpress_settings.php`, called from `header.php` right after `wp_head()`) emits an `Organization` JSON-LD block — name, logo, phone, email, address, `sameAs` social links — sourced from the same Footer options `ssr/fixed/Footer.php` reads. Change `@type` to `RealEstateAgent`/`LocalBusiness`/whatever fits the project (see the docblock). Keep this wired on every project — it's the machine-readable half of the identity fix below.
+
+### Why `ssr/fixed/Header.php` and `ssr/fixed/Footer.php` are not optional
+
+**This happened for real, not hypothetically.** A project built on this base shipped with `Header` and `Footer` as 100% client-only React components — the fixed SSR templates existed in this base theme, but got dropped somewhere in that project's fork lineage (it was cloned from an older sibling project, not straight from this base, and nobody noticed the `ssr/fixed/` wiring was missing from `footer.php`). Months later, **Google Ads suspended the account for "Unacceptable Business Practices."** Root cause, found by diffing `curl` (no JS) against a real browser render: the raw HTML had a lead-gen form asking for name/email/phone, and *zero* visible business identity — no company name, no address, no phone, no Privacy Policy/Terms links. All of it rendered correctly for real users after React hydrated; none of it reached the crawler, because Ad platforms' compliance crawlers are known to not reliably execute JS (or use a much shorter render budget than organic search).
+
+Takeaways for every project built on this base:
+1. **Never treat `ssr/fixed/Header.php` / `Footer.php` as boilerplate to fill in "later."** They exist specifically so a no-JS crawler can see who operates the site. A lead-gen or e-commerce site with a client-only footer is a live compliance risk, not just an SEO nice-to-have.
+2. **When starting a project by cloning an existing sibling project instead of this base directly**, diff its `footer.php` / `ssr/` against this base first. It's easy for a fork-of-a-fork to silently lose structural safety nets like this one.
+3. **Verify by curling the raw page, not by checking the browser.** `curl https://yoursite.com/ | grep -c '<footer'` (or equivalent) — if the business name/address/phone/Privacy-Terms links aren't in that output, a no-JS crawler doesn't see them either, no matter how correct the JS-rendered page looks. This is exactly how the bug above was found — the JS-rendered site had looked fine the whole time.
+4. Ship `ditto_organization_schema()` (above) alongside the SSR templates — it's a second, independent identity signal that doesn't depend on crawl timing at all.
 - **CPT detail components**: guard with `if ( ! is_singular('cpt-slug') ) return;`.
 
 ## GitHub Actions — Build & Deploy

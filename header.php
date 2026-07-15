@@ -28,6 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
   <link rel="pingback" href="<?php bloginfo('pingback_url'); ?>" />
   <?php wp_head(); ?>
+  <?php if ( function_exists( 'ditto_organization_schema' ) ) ditto_organization_schema(); ?>
 
   <!-- Critical runtime variables — must execute before the JS bundle -->
   <script>

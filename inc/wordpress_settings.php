@@ -146,18 +146,118 @@ add_action( 'send_headers', 'ditto_security_headers' );
 /**
  * Render a media attachment (image or video) as HTML.
  * Used by SSR PHP templates to mirror the React MediaRender component.
+ *
+ * Matches any video/* mime, not just video/mp4 — a real project's media
+ * library will have .webm (smaller, common for background/hero video) and a
+ * strict 'video/mp4' check silently falls through to <img src="*.webm">,
+ * which is broken. Confirmed the hard way on a derived project.
  */
-function render_media($media) {
-  if (!$media) return '';
+function render_media($media, $class = '') {
+  if (!$media || empty($media['url'])) return '';
 
-  if ($media['mime_type'] === 'video/mp4') {
+  $class_attr = $class ? sprintf(' class="%s"', esc_attr($class)) : '';
+
+  if (strpos($media['mime_type'] ?? '', 'video') === 0) {
     return sprintf(
-      '<video autoplay muted loop playsinline><source src="%s" type="video/mp4"></video>',
+      '<video%s src="%s" muted loop playsinline preload="metadata"></video>',
+      $class_attr,
       esc_url($media['url'])
     );
   }
 
-  return sprintf('<img src="%s" alt="%s" />', esc_url($media['url']), esc_attr($media['alt'] ?? ''));
+  return sprintf(
+    '<img%s src="%s" alt="%s" loading="lazy" decoding="async" />',
+    $class_attr,
+    esc_url($media['url']),
+    esc_attr($media['alt'] ?? '')
+  );
+}
+
+/**
+ * Organization / LocalBusiness structured data (JSON-LD), output in
+ * header.php on every page.
+ *
+ * CUSTOMIZING
+ * -----------
+ * Field names below assume the same 'footer_content' options group that
+ * ssr/fixed/Footer.php reads — adjust to match the real project's fields.
+ * Change '@type' to whatever fits: 'RealEstateAgent' for a property
+ * marketing site, 'LocalBusiness' for a physical storefront, 'ProfessionalService',
+ * etc. — see https://schema.org/Organization for subtypes.
+ *
+ * WHY THIS EXISTS
+ * ----------------
+ * This gives Google (and any automated compliance crawler that doesn't wait
+ * for React to hydrate — ad platforms' policy crawlers notably) a
+ * machine-readable, unambiguous statement of who operates the site: name,
+ * address, phone, email, social profiles, as a
+ * <script type="application/ld+json"> in the raw HTML response, independent
+ * of JS execution or crawl timing.
+ *
+ * This is not theoretical: a site built on this base was suspended from
+ * Google Ads for "Unacceptable Business Practices" because Header and Footer
+ * were 100% client-only React with no ssr/fixed/ mirror — a no-JS crawler
+ * saw a lead-gen form with zero visible business identity. Ship this
+ * function AND keep ssr/fixed/Header.php + ssr/fixed/Footer.php filled in
+ * with real content on every project — see the "SSR Architecture" section
+ * of CLAUDE.md for the full story and the escaping/verification conventions
+ * that go with it.
+ */
+function ditto_organization_schema() {
+  if ( ! function_exists( 'get_field' ) ) return;
+  $footer = get_field( 'footer_content', 'options' );
+  if ( ! $footer ) return;
+
+  // Collapses <br>-separated lines to ", " and normalizes whitespace —
+  // including U+2028/U+2029 line separators and non-breaking spaces, which
+  // sneak into ACF text fields pasted from Word/Google Docs and would
+  // otherwise leak as mangled bytes into the JSON-LD.
+  $strip = function( $html ) {
+    $text = str_replace( ['<br>', '<br/>', '<br />'], ', ', (string) $html );
+    $text = wp_strip_all_tags( $text );
+    $text = str_replace( ["\xE2\x80\xA8", "\xE2\x80\xA9", "\xC2\xA0"], ' ', $text );
+    $text = preg_replace( '/\s+/u', ' ', $text );
+    $text = preg_replace( '/\s*,\s*/u', ', ', $text );
+    return trim( $text, " \t\n\r\0\x0B," );
+  };
+
+  $schema = array(
+    '@context' => 'https://schema.org',
+    '@type'    => 'Organization', // see CUSTOMIZING above
+    'name'     => get_bloginfo( 'name' ),
+    'url'      => home_url( '/' ),
+  );
+
+  if ( ! empty( $footer['logo']['url'] ) ) {
+    $schema['logo']  = $footer['logo']['url'];
+    $schema['image'] = $footer['logo']['url'];
+  }
+
+  if ( ! empty( $footer['phone']['title'] ) ) {
+    $schema['telephone'] = $strip( $footer['phone']['title'] );
+  }
+
+  if ( ! empty( $footer['mail']['title'] ) ) {
+    $schema['email'] = $strip( $footer['mail']['title'] );
+  }
+
+  if ( ! empty( $footer['address']['title'] ) || ! empty( $footer['city'] ) ) {
+    $schema['address'] = array(
+      '@type'           => 'PostalAddress',
+      'streetAddress'   => $strip( $footer['address']['title'] ?? '' ),
+      'addressLocality' => $strip( $footer['city'] ?? '' ),
+    );
+  }
+
+  if ( ! empty( $footer['social_media'] ) ) {
+    $same_as = array();
+    foreach ( $footer['social_media'] as $row ) {
+      if ( ! empty( $row['link']['url'] ) ) $same_as[] = $row['link']['url'];
+    }
+    if ( $same_as ) $schema['sameAs'] = $same_as;
+  }
+
+  echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES ) . '</script>' . "\n";
 }
 
 /**
