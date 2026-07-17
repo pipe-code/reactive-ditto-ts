@@ -189,6 +189,8 @@ Small, dependency-free helpers reused across projects — prefer these over re-i
 | `recaptchaVerify(action)` | Full reCAPTCHA v3 execute-and-verify; returns `Promise<boolean>`. See the reCAPTCHA section. |
 | `smoothScrollTo(targetY, duration?)` | Eased (`easeInOutCubic`) programmatic scroll. Use for long, deliberate jumps (e.g. a header CTA scrolling to the footer form) where native `scroll-behavior: smooth` is too fast/linear. Default duration 1600ms. |
 | `htmlentities(str)` | (in `functions.tsx`) decode entities before setting `document.title`. |
+| `pushVirtualPageview(path)` | Already wired into `Layout.tsx` on every route change. Fires a `page_view` for GA4/GTM on SPA navigation, which never triggers a real page load on its own. See CLAUDE.md → "Analytics on an SPA" for why this exists. |
+| `trackConversion(eventName, params?)` | Call at the moment a form/purchase/signup succeeds — before redirecting anywhere. Don't rely on a URL-based trigger to catch the conversion. |
 
 When you add a helper that a future project would want, put it here as a single-purpose default export and document it in this table.
 
@@ -388,7 +390,7 @@ The field is named `ditto_components`. To rename it:
 4. Rename the field in ACF and update `acf-json/` sync files
 
 ### Add Google Analytics
-In `header.php`, set the `gaId` variable to your GA4 Measurement ID (e.g. `'G-XXXXXXXXXX'`).
+In `header.php`, set the `gaId` variable to your GA4 Measurement ID (e.g. `'G-XXXXXXXXXX'`). `pushVirtualPageview`/`trackConversion` (`src/utils/tracking.tsx`) are already wired in — see CLAUDE.md → "Analytics on an SPA" before assuming a URL-based conversion trigger will fire on this SPA.
 
 ### Configure the form proxy endpoint
 Define the PHP constant in `wp-config.php`: `define( 'PROXY_SUBMISSION_URL', 'https://…' );`. Note `.env` is webpack-only (dotenv at build time) — PHP never reads it, so putting the URL there does nothing. `proxy_submission_handler()` in `inc/endpoints.php` returns a 500 until the constant is defined.

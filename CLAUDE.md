@@ -394,6 +394,7 @@ Webpack uses `localIdentName: "[name]__[local]"` (no hash). Hardcode class names
 ### Fixed component SSR rules
 - **Header**: read nav with `wp_get_nav_menu_items($menu_locations['main_menu'])`. Use the same custom link detection logic as `main_menu_handler()`.
 - **Footer**: read all fields with `get_field('field_name', 'options')`. Omit the newsletter form.
+- **CPT detail components**: guard with `if ( ! is_singular('cpt-slug') ) return;`.
 - **`ditto_organization_schema()`** (`inc/wordpress_settings.php`, called from `header.php` right after `wp_head()`) emits an `Organization` JSON-LD block — name, logo, phone, email, address, `sameAs` social links — sourced from the same Footer options `ssr/fixed/Footer.php` reads. Change `@type` to `RealEstateAgent`/`LocalBusiness`/whatever fits the project (see the docblock). Keep this wired on every project — it's the machine-readable half of the identity fix below.
 
 ### Why `ssr/fixed/Header.php` and `ssr/fixed/Footer.php` are not optional
@@ -405,7 +406,17 @@ Takeaways for every project built on this base:
 2. **When starting a project by cloning an existing sibling project instead of this base directly**, diff its `footer.php` / `ssr/` against this base first. It's easy for a fork-of-a-fork to silently lose structural safety nets like this one.
 3. **Verify by curling the raw page, not by checking the browser.** `curl https://yoursite.com/ | grep -c '<footer'` (or equivalent) — if the business name/address/phone/Privacy-Terms links aren't in that output, a no-JS crawler doesn't see them either, no matter how correct the JS-rendered page looks. This is exactly how the bug above was found — the JS-rendered site had looked fine the whole time.
 4. Ship `ditto_organization_schema()` (above) alongside the SSR templates — it's a second, independent identity signal that doesn't depend on crawl timing at all.
-- **CPT detail components**: guard with `if ( ! is_singular('cpt-slug') ) return;`.
+
+## Analytics on an SPA — client-side navigation never fires a "page view" on its own
+
+**Also happened for real.** GTM's container load, `gtag('config', …)` (`header.php`), and any standalone pixel snippet a project adds all run **once**, on the actual browser page load. Every navigation after that in this app — React Router's `navigate()`, any `<Link>`/`<NavLink>` — is a client-side `history.pushState`, never a browser reload. None of those scripts see it happen by themselves.
+
+A project built on this base installed its tracking codes and the client immediately reported that the form-submission conversion (redirecting to a "thank you" page) wasn't registering. Root cause: a URL/page-view-based conversion trigger (in GTM, or an ad platform's own UI) can never fire for a redirect that never reloads the browser — exactly the pattern above.
+
+Fixed generically in `src/utils/tracking.tsx`, wired into `Layout.tsx`:
+- **`pushVirtualPageview(path)`** — called on every route change (`useLocation().pathname` in `Layout.tsx`). Pushes a `virtual_page_view` dataLayer event and calls `gtag('event', 'page_view', {page_path})` so GA4's own pageview count and any GTM "History Change"/custom-event trigger see SPA navigation like a real page load. **Every project should have this wired from day one**, whether or not tracking codes are installed yet — it costs nothing and the alternative is silently under-counting every pageview past the first.
+- **`trackConversion(eventName, params?)`** — call this directly at the exact moment a form/purchase/signup succeeds, *before* navigating to any confirmation route. Never assume a URL change alone will be tracked; the reliable signal is firing the event at the point of success, independent of whatever page it redirects to afterwards or however (or whether) a page-view trigger is configured downstream.
+- **Verify without ever submitting a real form**: temporarily stub the network call (whatever utility POSTs the form) to return success with no request, submit the form, check `window.dataLayer` and a monkey-patched `window.gtag`/`window.fbq` for the expected calls, then revert the stub immediately via `git checkout` before committing anything. Never let a tracking-verification test hit a real CRM/API endpoint.
 
 ## GitHub Actions — Build & Deploy
 
