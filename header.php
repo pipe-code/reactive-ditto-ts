@@ -47,7 +47,13 @@ if ( ! defined( 'ABSPATH' ) ) {
       s.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaId;
       document.head.appendChild(s);
       window.dataLayer = window.dataLayer || [];
+      // Assigned to window.gtag (not just a local function) so code outside
+      // this closure — src/utils/tracking.tsx's pushVirtualPageview/
+      // trackConversion — can call it too. Confirmed the hard way: without
+      // this line, window.gtag is undefined and every gtag('event', ...)
+      // call from the app silently no-ops.
       function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
       gtag('js', new Date());
       gtag('config', gaId);
     });
